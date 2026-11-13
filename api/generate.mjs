@@ -135,10 +135,12 @@ if (usageAllowed !== true) {
       const result = await aiResponse.json();
 
       if (!aiResponse.ok) {
-        return json({
-          error: "AI generation failed. Please try again later."
-        }, 502);
-      }
+  return json({
+    error: "Gemini API Error",
+    gemini_status: aiResponse.status,
+    details: result.error?.message || "Unknown Gemini error"
+  }, 502);
+}
 
       const generatedText =
         result.candidates?.[0]?.content?.parts
