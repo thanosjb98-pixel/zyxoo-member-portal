@@ -79,6 +79,33 @@ export default {
         return json({ error: "Your prompt is too long." }, 400);
       }
 
+     // Reserve one of the member's 5 daily generation attempts.
+const usageResponse = await fetch(
+  `${supabaseUrl}/rest/v1/rpc/reserve_zyxoo_generation`,
+  {
+    method: "POST",
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({})
+  }
+);
+
+if (!usageResponse.ok) {
+  return json({
+    error: "Could not verify your daily generation limit. Please try again later."
+  }, 500);
+}
+
+const usageAllowed = await usageResponse.json();
+
+if (usageAllowed !== true) {
+  return json({
+    error: "You have reached your limit of 5 generations for today. Please try again tomorrow."
+  }, 429);
+}
       // Generate content using Gemini.
       const aiResponse = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(geminiKey)}`,
