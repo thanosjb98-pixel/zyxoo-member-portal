@@ -126,9 +126,8 @@ if (usageAllowed !== true) {
               parts: [{ text: prompt }]
             }],
             generationConfig: {
-              temperature: 0.8,
-              maxOutputTokens: 3000
-            }
+  maxOutputTokens: 3000
+}
           })
         }
       );
