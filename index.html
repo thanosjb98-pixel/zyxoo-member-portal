@@ -1,64 +1,179 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zyxoo | The ContentPilot</title>
+  <title>Zyxoo The ContentPilot</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; }
     body {
-      margin: 0;
+      margin: 0; min-height: 100vh; padding: 30px 16px;
+      background: #090b12; color: #fff;
       font-family: Arial, sans-serif;
-      background: #090d18;
-      color: white;
-      text-align: center;
+      display: flex; align-items: center; justify-content: center;
     }
-    main {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 30px 20px;
-    }
-    .logo { font-size: 42px; font-weight: bold; }
-    .tagline { color: #aab4ca; margin: 12px 0 30px; }
     .card {
-      max-width: 480px;
-      width: 100%;
-      padding: 32px 24px;
-      border: 1px solid #303a50;
-      border-radius: 20px;
-      background: #141c2d;
+      width: 100%; max-width: 430px; padding: 32px;
+      background: #141824; border: 1px solid #292f40;
+      border-radius: 18px;
     }
-    .price { font-size: 48px; font-weight: bold; margin: 18px 0; }
-    .access { color: #aab4ca; }
-    .coming {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 12px 20px;
-      background: #7455f7;
-      border-radius: 10px;
-      font-weight: bold;
+    h1 { text-align: center; letter-spacing: 3px; }
+    .sub { text-align: center; color: #aab1c3; }
+    .price { text-align: center; font-size: 27px; font-weight: bold; margin: 24px 0; }
+    input, button {
+      width: 100%; padding: 14px; margin: 8px 0;
+      border-radius: 9px; font-size: 15px;
     }
-    footer { color: #77839b; margin-top: 35px; font-size: 13px; }
+    input { background: #0c101a; border: 1px solid #353d50; color: white; }
+    button { border: 0; cursor: pointer; font-weight: bold; }
+    .primary { background: #a78bfa; color: #090b12; }
+    .secondary { background: #252c3d; color: white; }
+    #message { color: #c4b5fd; text-align: center; line-height: 1.5; }
+    .hidden { display: none; }
+    .status { padding: 18px; border-radius: 10px; background: #202638; line-height: 1.6; }
   </style>
 </head>
 <body>
-  <main>
-    <div class="logo">ZYXOO</div>
-    <p class="tagline">THE CONTENTPILOT</p>
+  <main class="card">
+    <h1>ZYXOO</h1>
+    <p class="sub">THE CONTENTPILOT</p>
+    <div class="price">₱499 <span style="font-size:14px">/ Lifetime Access</span></div>
 
-    <section class="card">
-      <h1>Your AI Content Creation Studio</h1>
-      <p>Create stories, AI dramas, characters, storyboards and content ideas.</p>
-      <div class="price">₱499</div>
-      <p class="access">One-time payment · Lifetime access</p>
-      <p>Payment options: GCash and Maya</p>
-      <div class="coming">MEMBERSHIP OPENING SOON</div>
+    <section id="authSection">
+      <h2>Member Login</h2>
+      <p class="sub">Create an account or log in to continue.</p>
+
+      <input id="email" type="email" placeholder="Your email address">
+      <input id="password" type="password" placeholder="Password (minimum 6 characters)">
+
+      <button class="primary" onclick="signUp()">CREATE ACCOUNT</button>
+      <button class="secondary" onclick="signIn()">LOGIN</button>
     </section>
 
-    <footer>© 2026 Zyxoo The ContentPilot</footer>
+    <section id="memberSection" class="hidden">
+      <h2>Membership Status</h2>
+      <div id="memberStatus" class="status">Checking your membership...</div>
+      <button class="secondary" onclick="signOut()">LOG OUT</button>
+    </section>
+
+    <p id="message"></p>
   </main>
+
+  <script>
+    // Replace these two values with your own Supabase details.
+    const SUPABASE_URL = "https://ndecqqdlyqbrhdupvivl.supabase.co/rest/v1/";
+    const SUPABASE_KEY = "sb_publishable_eSn_SPnqkkwtu12HLqpydw_lzZmYxkA";
+
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const message = document.getElementById("message");
+
+    function showMessage(text) {
+      message.textContent = text;
+    }
+
+    async function signUp() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || password.length < 6) {
+        showMessage("Enter a valid email and a password with at least 6 characters.");
+        return;
+      }
+
+      showMessage("Creating your account...");
+
+      const { error } = await client.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+
+      if (error) {
+        showMessage(error.message);
+      } else {
+        showMessage("Account created! Please check your email and confirm your account before logging in.");
+      }
+    }
+
+    async function signIn() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        showMessage("Enter your email and password.");
+        return;
+      }
+
+      showMessage("Logging in...");
+
+      const { error } = await client.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        showMessage(error.message);
+      } else {
+        await checkMembership();
+      }
+    }
+
+    async function checkMembership() {
+      const { data: { user } } = await client.auth.getUser();
+
+      if (!user) return;
+
+      document.getElementById("authSection").classList.add("hidden");
+      document.getElementById("memberSection").classList.remove("hidden");
+
+      document.getElementById("memberStatus").textContent =
+        "Checking membership...";
+
+      const { data, error } = await client
+        .from("memberships")
+        .select("payment_status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        document.getElementById("memberStatus").textContent =
+          "Unable to check membership. Please try again.";
+        return;
+      }
+
+      if (!data) {
+        document.getElementById("memberStatus").textContent =
+          "Your membership record is being prepared. Please contact support if this continues.";
+      } else if (data.payment_status === "approved") {
+        document.getElementById("memberStatus").textContent =
+          "Payment approved! Your membership is active. The ContentPilot workspace will be available here once it is connected.";
+      } else {
+        document.getElementById("memberStatus").textContent =
+          "Your account is registered, but your payment is still pending approval. Please wait for verification.";
+      }
+    }
+
+    async function signOut() {
+      await client.auth.signOut();
+      document.getElementById("memberSection").classList.add("hidden");
+      document.getElementById("authSection").classList.remove("hidden");
+      showMessage("You have logged out.");
+    }
+
+    client.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setTimeout(() => checkMembership(), 0);
+      }
+    });
+
+    client.auth.getSession().then(({ data }) => {
+      if (data.session) checkMembership();
+    });
+  </script>
 </body>
 </html>
