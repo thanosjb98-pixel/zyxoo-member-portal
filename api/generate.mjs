@@ -40,10 +40,10 @@ export default {
         }
       );
 
-      if (!userResponse.ok) {
+     if (!userResponse.ok) {
   return json({
-    error: "Supabase authentication failed.",
-    status: userResponse.status
+    error: "Supabase authentication failed. HTTP " + userResponse.status,
+    details: await userResponse.text()
   }, 401);
 }
 
