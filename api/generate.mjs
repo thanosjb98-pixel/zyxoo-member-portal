@@ -41,8 +41,11 @@ export default {
       );
 
       if (!userResponse.ok) {
-        return json({ error: "Your login session is invalid." }, 401);
-      }
+  return json({
+    error: "Supabase authentication failed.",
+    status: userResponse.status
+  }, 401);
+}
 
       const user = await userResponse.json();
 
