@@ -33,6 +33,34 @@
     #message { color: #c4b5fd; text-align: center; line-height: 1.5; }
     .hidden { display: none; }
     .status { padding: 18px; border-radius: 10px; background: #202638; line-height: 1.6; }
+  select, textarea {
+  width: 100%;
+  padding: 14px;
+  margin: 8px 0;
+  border-radius: 9px;
+  font-size: 15px;
+  background: #0c101a;
+  border: 1px solid #353d50;
+  color: white;
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+label {
+  display: block;
+  margin-top: 14px;
+  color: #aab1c3;
+  font-size: 12px;
+}
+
+#generationMessage {
+  color: #c4b5fd;
+  margin: 10px 0;
+  line-height: 1.5;
+}
   </style>
 </head>
 <body>
@@ -54,8 +82,37 @@
 
     <section id="memberSection" class="hidden">
       <h2>Membership Status</h2>
-      <div id="memberStatus" class="status">Checking your membership...</div>
-      <button class="secondary" onclick="signOut()">LOG OUT</button>
+     
+<div id="memberStatus" class="status">Checking your membership...</div>
+
+<section id="generatorSection" class="hidden">
+  <h2>ZYXOO AI CONTENT STUDIO</h2>
+  <p class="sub">Choose your content type and create something amazing.</p>
+
+  <label for="contentType">CONTENT CATEGORY</label>
+  <select id="contentType">
+    <option value="AI Drama Series">AI Drama Series</option>
+    <option value="UGC Classic Comedy">UGC Classic Comedy</option>
+    <option value="Affiliate Marketing">Affiliate Marketing</option>
+    <option value="Social Media Content">Social Media Content</option>
+    <option value="Video Scripts and Storyboards">Video Scripts and Storyboards</option>
+  </select>
+
+  <label for="prompt">YOUR IDEA OR INSTRUCTIONS</label>
+  <textarea id="prompt" rows="7" placeholder="Describe what you want Zyxoo to create..."></textarea>
+
+ <button id="generateButton" class="primary" onclick="generateContent()">GENERATE CONTENT</button>
+
+  <div id="generationMessage"></div>
+
+  <h3>YOUR GENERATED CONTENT</h3>
+  <textarea id="generatedOutput" rows="12" placeholder="Your generated content will appear here..." readonly></textarea>
+
+  <button class="secondary" onclick="copyGeneratedContent()">COPY CONTENT</button>
+</section>
+
+<button class="secondary" onclick="signOut()">LOG OUT</button>
+
     </section>
 
     <p id="message"></p>
@@ -140,24 +197,98 @@
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (error) {
-        document.getElementById("memberStatus").textContent =
-          "Unable to check membership. Please try again.";
-        return;
-      }
+      const generator = document.getElementById("generatorSection");
+generator.classList.add("hidden");
 
-      if (!data) {
-        document.getElementById("memberStatus").textContent =
-          "Your membership record is being prepared. Please contact support if this continues.";
-      } else if (data.payment_status === "approved") {
-        document.getElementById("memberStatus").textContent =
-          "Payment approved! Your membership is active. The ContentPilot workspace will be available here once it is connected.";
-      } else {
-        document.getElementById("memberStatus").textContent =
-          "Your account is registered, but your payment is still pending approval. Please wait for verification.";
-      }
+if (error) {
+  document.getElementById("memberStatus").textContent =
+    "Unable to check membership. Please try again.";
+  return;
+}
+
+if (!data) {
+  document.getElementById("memberStatus").textContent =
+    "Your membership record is being prepared. Please contact support if this continues.";
+} else if (data.payment_status === "approved") {
+  document.getElementById("memberStatus").textContent =
+    "Payment approved! Your membership is active. Welcome to Zyxoo!";
+  generator.classList.remove("hidden");
+} else {
+  document.getElementById("memberStatus").textContent =
+    "Your account is registered, but your payment is still pending approval. Please wait for verification.";
+}
     }
 
+    async function generateContent() {
+  const message = document.getElementById("generationMessage");
+  const output = document.getElementById("generatedOutput");
+  const button = document.getElementById("generateButton");
+
+  const { data: { session } } = await client.auth.getSession();
+
+  if (!session?.access_token) {
+    message.textContent = "Please log in again.";
+    return;
+  }
+
+  const category = document.getElementById("contentType").value;
+  const userPrompt = document.getElementById("prompt").value.trim();
+
+  if (!userPrompt) {
+    message.textContent = "Please enter your idea or instructions.";
+    return;
+  }
+
+  const fullPrompt =
+    "Content category: " + category +
+    "\n\nUser request:\n" + userPrompt;
+
+  button.disabled = true;
+  message.textContent = "Zyxoo is creating your content. Please wait...";
+  output.value = "";
+
+  try {
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + session.access_token
+      },
+      body: JSON.stringify({ prompt: fullPrompt })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Generation failed.");
+    }
+
+    output.value = data.text;
+    message.textContent = "Your content is ready! 🎉";
+
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function copyGeneratedContent() {
+  const output = document.getElementById("generatedOutput");
+  const message = document.getElementById("generationMessage");
+
+  if (!output.value.trim()) {
+    message.textContent = "There is no content to copy yet.";
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(output.value);
+    message.textContent = "Content copied successfully!";
+  } catch (error) {
+    message.textContent = "Unable to copy. Please select and copy the text manually.";
+  }
+}
     async function signOut() {
       await client.auth.signOut();
       document.getElementById("memberSection").classList.add("hidden");
